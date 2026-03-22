@@ -1,0 +1,21 @@
+from gpiozero import LEDBoard   # gpiozero 라이브러리에서 LEDBoard 클래스(여러 LED를 한 번에 제어)를 불러옴
+from time import sleep          # time 라이브러리에서 sleep 함수(일정 시간 대기)를 불러옴
+
+leds = LEDBoard(2, 3, 4, 20, 21)  # GPIO 2, 3, 4, 20, 21번 핀에 연결된 5개의 LED를 하나의 객체로 생성
+
+try:                              # 예외 처리를 위한 try 블록 시작
+    while 1:                      # 무한 반복 (계속해서 아래 동작을 반복 실행)
+        
+        leds.value = (0, 0, 1, 1, 0)  # 3번, 4번 LED ON / 나머지 OFF
+        sleep(3.0)                    # 3초 동안 유지
+        
+        leds.value = (0, 1, 0, 1, 0)  # 2번, 4번 LED ON / 나머지 OFF
+        sleep(1.0)                    # 1초 동안 유지
+        
+        leds.value = (1, 0, 0, 0, 1)  # 1번, 5번 LED ON / 나머지 OFF
+        sleep(3.0)                    # 3초 동안 유지
+
+except KeyboardInterrupt:        # Ctrl + C로 강제 종료 시 실행되는 부분
+    pass                         # 아무 동작도 하지 않고 그냥 넘어감
+
+leds.off()                       # 프로그램 종료 시 모든 LED를 OFF (꺼짐 상태로 만듦)
