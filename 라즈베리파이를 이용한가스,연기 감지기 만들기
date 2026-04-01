@@ -1,1 +1,34 @@
+from gpiozero import DigitalInputDevice   # 센서의 디지털 입력을 받기 위한 클래스
+from gpiozero import OutputDevice         # 부저와 같은 출력 장치를 제어하기 위한 클래스
+import time                               # 시간 지연을 위한 라이브러리
 
+# GPIO 18번 핀을 부저 출력 핀으로 설정
+bz = OutputDevice(18)
+
+# GPIO 17번 핀을 MQ-2 가스 센서의 디지털 출력(DOUT) 입력 핀으로 설정
+gas = DigitalInputDevice(17)
+
+try:
+    # 무한 반복 (프로그램이 계속 센서를 확인하도록 함)
+    while True:
+        
+        # gas.value는 센서의 현재 상태를 의미함
+        # 0 (LOW) → 가스 감지됨
+        # 1 (HIGH) → 정상 상태
+        if gas.value == 0:
+            print("Gas Detected")   # 가스 감지 시 출력 메시지
+            bz.on()                # 부저 ON (경고음 발생)
+        
+        else:
+            print("No Gas Detected")  # 정상 상태 메시지
+            bz.off()                 # 부저 OFF
+        
+        # 0.2초마다 센서 상태를 반복 확인
+        time.sleep(0.2)
+
+# Ctrl + C로 프로그램 종료 시 예외 처리
+except KeyboardInterrupt:
+    pass
+
+# 프로그램 종료 시 부저를 반드시 꺼줌
+bz.off()
