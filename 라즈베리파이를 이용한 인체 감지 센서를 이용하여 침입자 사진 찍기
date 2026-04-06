@@ -1,0 +1,38 @@
+from gpiozero import MotionSensor  # 하드웨어 제어를 위한 gpiozero 라이브러리에서 PIR 센서 클래스를 불러오기
+import time                        # 실행 지연(sleep) 기능을 사용하기 위한 시간 관련 라이브러리 불러오기
+from picamera2 import Picamera2    # 라즈베리파이 카메라 모듈 제어를 위한 Picamera2 라이브러리 불러오기
+import datetime                    # 촬영 시점의 날짜와 시간 정보를 가져오기 위한 라이브러리 불러오기
+
+# 센서 및 카메라 초기 설정
+pirPin = MotionSensor(16)          # PIR 센서의 신호선(Signal)이 연결된 GPIO 16번 핀을 입력으로 설정
+picam2 = Picamera2()               # 카메라 제어를 위한 Picamera2 객체 인스턴스 생성
+camera_config = picam2.create_preview_configuration()  # 카메라의 기본 미리보기 및 촬영 환경 설정 구성
+picam2.configure(camera_config)    # 생성된 설정값을 카메라 시스템에 적용
+picam2.start()                     # 카메라 모듈을 활성화하여 촬영 대기 상태로 진입
+
+try:
+    # 메인 실행 루프
+    while True:                    # 프로그램 종료 전까지 무한 반복 실행
+        try:
+            sensorValue = pirPin.value  # PIR 센서로부터 현재 감지 값(0 또는 1)을 읽어옴
+            
+            if sensorValue == 1:        # 센서 값이 1(High)이면 움직임이 발생한 것으로 판단
+                now = datetime.datetime.now()         # 움직임이 감지된 정확한 현재 시각 추출
+                print(f"Movement Detected: {now}")     # 터미널 창에 감지 시각 로그 출력
+                
+                # 파일명 생성: '년-월-일 시:분:초' 형식의 문자열로 변환
+                fileName = now.strftime('%Y-%m-%d %H:%M:%S') 
+                
+                # 생성된 파일명으로 정지 영상(JPG)을 촬영하여 저장
+                picam2.capture_file(fileName + '.jpg') 
+                
+                # 짧은 대기 시간을 주어 동일한 움직임에 대해 사진이 너무 많이 찍히는 것을 방지
+                time.sleep(0.5) 
+
+        except Exception as e:     # 루프 내부에서 촬영 중 예상치 못한 오류 발생 시 처리
+            print(f"Error during capture: {e}") # 오류 내용을 출력하고 프로그램이 멈추지 않게 함
+            pass                   # 다음 감지 대기 상태로 넘어감
+
+except KeyboardInterrupt:          # 사용자가 Ctrl+C를 눌러 프로그램을 강제 종료했을 때 처리
+    print("\nProgram stopped by User") # 종료 메시지 출력
+    picam2.stop()                  # 카메라 모듈 작동 중지 및 리소스 해제
