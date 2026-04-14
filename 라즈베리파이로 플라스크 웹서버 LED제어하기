@@ -1,1 +1,25 @@
+from flask import Flask, render_template, request  # 웹 서버를 만들고, 화면을 보여주고, 데이터를 받는 기능을 가져옴
+from gpiozero import LED                           # 라즈베리파이 핀으로 LED를 제어하는 기능을 가져옴
 
+app = Flask(__name__)                              # 우리만의 웹 서버 프로그램을 생성
+red_led = LED(21)                                  # 21번 핀에 LED가 연결되었다고 설정
+
+@app.route('/')                                    # 처음 웹 주소에 접속했을 때 보여줄 화면 설정
+def home():
+    # 미리 만들어둔 index.html(버튼 화면) 파일을 브라우저에 띄워줌
+    return render_template("index.html")
+
+@app.route('/data', methods = ['POST'])            # 버튼을 클릭해서 데이터를 보냈을 때(POST 방식) 실행
+def data():                                        # 사용자가 누른 버튼의 값('on' 또는 'off')을 가져와서 변수에 저장
+    data = request.form['led']
+    
+    if(data == 'on'):                              # 가져온 값이 'on'이라면
+        red_led.on()                               # 실제로 LED를 켬
+                                                
+    elif(data == 'off'):                           # 가져온 값이 'off'라면
+        red_led.off()                              # 실제로 LED를 끔
+        
+    return home()                                  # 처리가 끝나면 다시 처음 화면(버튼 페이지)으로 돌아감
+
+if __name__ == "__main__":                         # 누구나 내 라즈베리파이 주소로 접속할 수 있게 서버를 실행 (포트 번호 80)   
+    app.run(host = "0.0.0.0", port = "80")
