@@ -1,0 +1,26 @@
+import urllib.request                # 인터넷을 통해 외부 서버(API)에 데이터를 요청하는 기능
+import json                          # 서버에서 받은 복잡한 데이터를 파이썬이 이해하기 쉽게 변환하는 기능
+import tkinter                       # 윈도우 창과 같은 그래픽 사용자 인터페이스(GUI) 제작 도구
+import tkinter.font                  # GUI 화면에 표시되는 글자 크기나 글꼴을 설정하는 도구
+API_KEY = "Enter your API key here"  # 발급받은 개인 인증키 설정
+
+def tick1Min():  # 데이터를 가져올 서버 주소를 조합 (서울 날씨, 미터법 단위 설정)
+    url = f"https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid={API_KEY}&units=metric"
+    with urllib.request.urlopen(url) as r:          # 설정한 주소로 접속하여 데이터 읽어오기
+        data = json.loads(r.read())                 # 읽어온 데이터를 파이썬 딕셔너리 구조로 변환
+    temp = data["main"]["temp"]                     # 변환된 데이터 뭉치에서 '온도' 정보만 추출      
+    humi = data["main"]["humidity"]                 # 변환된 데이터 뭉치에서 '습도' 정보만 추출
+    label.config(text=f"{temp:.1f}C {humi}%")       # 추출한 온습도 정보를 화면의 라벨에 소수점 첫째 자리까지 표시
+    window.after(60000, tick1Min)                   # 60,000밀리초(1분)마다 이 함수를 다시 실행하도록 예약
+
+
+window = tkinter.Tk()                              # 프로그램을 위한 메인 윈도우 창 생성
+window.title("TEMP HUMI DISPLAY")                  # 창 상단 바에 표시될 제목 설정
+window.geometry("400x100")                         # 창의 가로와 세로 크기 설정
+window.resizable(False, False)                     # 사용자가 창 크기를 임의로 조절하지 못하도록 고정
+font = tkinter.font.Font(size=30)                  # 화면에 보여줄 큰 글자 크기(30pt) 설정
+label = tkinter.Label(window, text="", font=font)  # 글자가 들어갈 빈 공간(라벨) 생성 및 폰트 적용
+label.pack()                                       # 라벨을 창 중앙에 배치
+
+tick1Min()          # 최초 실행 시 날씨 정보를 즉시 불러오기 위해 함수 호출
+window.mainloop()   # 프로그램이 종료되지 않고 계속 작동하도록 대기
