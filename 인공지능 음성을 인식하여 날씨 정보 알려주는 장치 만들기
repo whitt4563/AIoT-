@@ -1,50 +1,50 @@
-import speech_recognition as sr  # 음성 인식 라이브러리 임포트
-import requests                  # HTTP 요청 라이브러리 임포트
-import os                        # 시스템 명령어 실행을 위한 os 라이브러리 임포트
-import time                      # 시간 지연 처리를 위한 time 라이브러리 임포트
+import speech_recognition as sr  # Google STT(음성인식) 라이브러리 임포트
+import requests                  # OpenWeatherMap API 통신용 HTTP 라이브러리 임포트
+import os                        # espeak TTS 엔진 실행을 위한 시스템 라이브러리 임포트
+import time                      # 프로그램 제어 및 지연 처리를 위한 라이브러리 임포트
 
-API_KEY = "Enter your API key here"  # OpenWeatherMap API 키 설정
+API_KEY = "Enter your API key here"  # 날씨 API 인증을 위한 고유 API 키 설정
 
-# 서울 날씨 정보 요청 URL (섭씨 단위)
+# 서울 날씨를 섭씨 단위로 요청하기 위한 타겟 URL 정의
 url = f"https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid={API_KEY}&units=metric"
 
-def speak(option, msg):
-    os.system(f"espeak {option} \'{msg}\'")  # espeak 명령어로 음성 출력
+def speak(option, msg):  # espeak TTS 인자 및 메시지를 받아 음성을 출력하는 함수
+    os.system("espeak {}'{}'".format(option, msg))  # 시스템 명령어로 TTS 엔진 동적 호출
 
-# 메인 실행 블록
 try:
-    while True:  # 프로그램 종료 시까지 무한 반복
-        r = sr.Recognizer()  # 음성 인식기 객체 생성
-        with sr.Microphone() as source:  # 기본 마이크를 입력 소스로 설정
-            print("Say something!")  # 음성 입력 안내 메시지
-            audio = r.listen(source)  # 마이크 음성 녹음
-
+    while True:  # Ctrl+C 입력 전까지 실시간 음성 인식을 수행하는 무한 루프
+        r = sr.Recognizer()  # 오디오 데이터 분석 및 텍스트 변환을 위한 객체 생성
+        
+        with sr.Microphone() as source:  # 기본 마이크 장치를 컨텍스트 매니저로 활성화
+            print("Say something!")      # 음성 입력 대기 안내 메시지 출력
+            audio = r.listen(source)     # 입력된 아날로그 소리를 디지털 오디오로 녹음
+            
         try:
-            # 녹음된 음성을 한국어로 텍스트 변환
+            # 녹음된 오디오를 구글 STT 서버로 전송해 한국어 텍스트로 변환
             text = r.recognize_google(audio, language='ko-KR')
-            print(f"You said: {text}")  # 인식된 텍스트 출력
-
-            if "날씨" in text:                 # 텍스트에 "날씨" 포함 여부 확인
-                print("날씨 음성 인식 완료.")   # 인식 성공 메시지
-                response = requests.get(url)   # 날씨 API에 GET 요청
-                data = response.json()         # 응답 데이터를 JSON 파싱
-
-                temp = data["main"]["temp"]      # 현재 기온(섭씨) 추출
-                humi = data["main"]["humidity"]  # 현재 습도(%) 추출
-
-                # 안내 음성 메시지 생성
-                msg = f'기온은 {int(temp)}도 습도는 {humi}퍼센트입니다.'
-                # espeak 옵션 설정 (속도, 음높이, 음량, 한국어 여성 음성)
+            print("You said: " + text)   # 음성 인식 결과 콘솔 출력
+            
+            if text in "날씨":  # 인식된 문자열이 키워드("날씨") 범위 내에 있는지 검사
+                print("날씨 음성을 인식하였습니다.")  # 조건 충족 시 안내 메시지 출력
+                
+                response = requests.get(url)   # API 서버에 GET 요청을 보내고 응답 객체 수신
+                data = response.json()         # 응답 데이터를 파이썬 딕셔너리(JSON) 형태로 파싱
+                
+                temp = data["main"]["temp"]       # JSON 데이터에서 현재 기온(섭씨) 추출
+                humi = data["main"]["humidity"]   # JSON 데이터에서 현재 습도(%) 추출
+                
+                # 수치 데이터 형변환 및 문자열 연산을 통한 출력용 가이드 문장 결합
+                msg = '  기온은 ' + str(int(temp)) + '도 습도는 ' + str(humi) + '퍼센트 입니다'
+                
+                # espeak 가독성 제어 옵션 설정 (속도 180, 음높이 50, 볼륨 200, 한국어 여성)
                 option = '-s 180 -p 50 -a 200 -v ko+f5'
-                speak(option, msg)  # 날씨 정보 음성 출력
-
-        except sr.UnknownValueError:
-            # 음성 인식 실패 예외 처리
+                speak(option, msg)  # 합성된 문장과 옵션을 인자로 전달하여 TTS 함수 호출
+                
+        except sr.UnknownValueError:  # 음성 식별 불가(노이즈 등) 시 예외 처리 및 에러 로그
             print("Google Speech Recognition could not understand audio")
-        except sr.RequestError as e:
-            # API 요청 실패 예외 처리
-            print(f"Could not request results from Google Speech Recognition service; {e}")
-
-except KeyboardInterrupt:  # Ctrl+C 입력 시 프로그램 종료 처리
-    print("프로그램을 종료합니다.")
-    pass  # 루프 탈출 및 종료
+            
+        except sr.RequestError as e:  # 네트워크 단절 등 서버 통신 실패 시 예외 처리 및 원인 출력
+            print("Could not request results from Google Speech Recognition service; {0}".format(e))
+            
+except KeyboardInterrupt:  # Ctrl+C 입력 시 안전하게 루프를 탈출하고 프로그램을 정상 종료
+    pass
