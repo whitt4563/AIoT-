@@ -1,4 +1,3 @@
-```python
 import cv2              # 카메라 영상 처리 (OpenCV)
 from gpiozero import Buzzer  # 라즈베리파이 GPIO 부저 제어
 import time              # 시간 관련 유틸리티
@@ -64,4 +63,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-```
