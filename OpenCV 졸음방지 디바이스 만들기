@@ -1,0 +1,67 @@
+```python
+import cv2              # 카메라 영상 처리 (OpenCV)
+from gpiozero import Buzzer  # 라즈베리파이 GPIO 부저 제어
+import time              # 시간 관련 유틸리티
+
+buzzerPin = Buzzer(16)   # GPIO 16번 핀에 부저 연결
+
+def main():
+
+    # ── 카메라 초기화 ───────────────────────────────────
+    camera = cv2.VideoCapture(-1)   # -1: 연결된 웹캠 자동 탐지
+    camera.set(3, 640)              # 가로 해상도 640px
+    camera.set(4, 480)              # 세로 해상도 480px
+
+    # ── 얼굴 · 눈 탐지 모델 로드 ────────────────────────
+    face_xml = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+    eye_xml  = cv2.data.haarcascades + 'haarcascade_eye.xml'
+
+    face_cascade = cv2.CascadeClassifier(face_xml)  # 얼굴 탐지기
+    eye_cascade  = cv2.CascadeClassifier(eye_xml)   # 눈  탐지기
+
+    # ── 메인 루프 ───────────────────────────────────────
+    while camera.isOpened():        # 카메라가 열려 있는 동안 반복
+        _, image = camera.read()    # 프레임 한 장 캡처
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # 흑백 변환 (탐지 정확도↑)
+
+        # ┌ 얼굴 탐지 ──────────────────────────────────────
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,       # 탐지 윈도우를 10%씩 확대하며 스캔
+            minNeighbors=5,        # 5번 이상 감지돼야 얼굴로 인정
+            minSize=(100, 100),    # 100×100px 미만 영역은 무시
+            flags=cv2.CASCADE_SCALE_IMAGE
+        )
+        print("탐지된 얼굴 수: " + str(len(faces)))
+
+        if len(faces):
+            for (x, y, w, h) in faces:
+                cv2.rectangle(image, (x, y), (x+w, y+h), (255, 0, 0), 2)  # 파란 사각형
+
+                face_gray  = gray[y:y+h, x:x+w]
+                face_color = image[y:y+h, x:x+w]
+
+                # ┌ 눈 탐지 ────────────────────────────────────
+                eyes = eye_cascade.detectMultiScale(face_gray, scaleFactor=1.1, minNeighbors=5)
+
+                # ┌ 졸음 판단 → 부저 제어 ──────────────────────
+                if len(eyes) <= 1:
+                    buzzerPin.on()   # 눈 1개 이하 → 졸음 의심, 경고음 ON
+                else:
+                    buzzerPin.off()  # 눈 2개 이상 → 정상, 경고음 OFF
+
+                for (ex, ey, ew, eh) in eyes:
+                    cv2.rectangle(face_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)  # 초록 사각형
+
+        cv2.imshow('result', image)
+
+        if cv2.waitKey(1) == ord('q'):
+            break  # q 키 → 종료
+
+    # ── 종료 처리 ──────────────────────────────────────
+    cv2.destroyAllWindows()  # 모든 OpenCV 창 닫기
+    buzzerPin.off()          # 부저 강제 OFF
+
+if __name__ == '__main__':
+    main()
+```
