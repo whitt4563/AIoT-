@@ -1,0 +1,47 @@
+from gpiozero import DigitalInputDevice  # 디지털 입력 장치 라이브러리 (가스 센서)
+from gpiozero import OutputDevice        # 디지털 출력 장치 라이브러리 (부저)
+from gpiozero import LED                 # LED 제어 라이브러리
+import requests                          # 텔레그램 API 요청 라이브러리
+import time                              # 시간 지연 라이브러리
+
+TOKEN = "YOUR_TOKEN_HERE"      # 텔레그램 봇 토큰
+CHAT_ID = "YOUR_TOKEN_HERE"    # 텔레그램 채팅 ID
+
+bz = OutputDevice(18)          # GPIO 18번 핀 - 능동 부저
+gas = DigitalInputDevice(17)   # GPIO 17번 핀 - MQ-2 가스 센서
+red_led = LED(2)               # GPIO 2번 핀 - 빨간 LED (위험)
+green_led = LED(3)             # GPIO 3번 핀 - 초록 LED (정상)
+
+def send_telegram(message):
+    # 텔레그램 봇으로 메시지 전송하는 함수
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, data={"chat_id": CHAT_ID, "text": message})
+
+gas_detected = False  # 가스 감지 여부 (중복 메시지 방지용)
+
+try:
+    green_led.on()  # 시작 시 초록 LED 켜기 (정상 상태)
+    while True:
+        if gas.value == 0:       # 가스 감지됨 (센서값 0 = 감지)
+            print("가스 감지됨")
+            bz.on()              # 부저 울리기
+            red_led.on()         # 빨간 LED 켜기
+            green_led.off()      # 초록 LED 끄기
+            if not gas_detected:
+                send_telegram("⚠️ 가스 감지됨! 즉시 확인하세요!")  # 텔레그램 알림 전송
+                gas_detected = True  # 중복 전송 방지
+        else:                    # 정상 상태 (센서값 1 = 미감지)
+            print("정상")
+            bz.off()             # 부저 끄기
+            red_led.off()        # 빨간 LED 끄기
+            green_led.on()       # 초록 LED 켜기
+            gas_detected = False # 가스 감지 초기화
+        time.sleep(0.2)          # 0.2초마다 센서 확인
+
+except KeyboardInterrupt:
+    pass  # Ctrl+C 입력 시 정상 종료
+
+# 프로그램 종료 시 모든 장치 끄기
+bz.off()
+red_led.off()
+green_led.off()
